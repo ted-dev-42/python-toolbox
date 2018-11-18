@@ -27,6 +27,9 @@ from ._common import sockfam_to_enum
 from ._common import socktype_to_enum
 from ._common import usage_percent
 from ._compat import which
+from ._exceptions import AccessDenied
+from ._exceptions import NoSuchProcess
+from ._exceptions import ZombieProcess
 
 __extra__all__ = []
 
@@ -100,6 +103,11 @@ else:
     PAGESIZE = os.sysconf("SC_PAGE_SIZE")
 AF_LINK = cext_posix.AF_LINK
 
+HAS_PER_CPU_TIMES = hasattr(cext, "per_cpu_times")
+HAS_PROC_NUM_THREADS = hasattr(cext, "proc_num_threads")
+HAS_PROC_OPEN_FILES = hasattr(cext, 'proc_open_files')
+HAS_PROC_NUM_FDS = hasattr(cext, 'proc_num_fds')
+
 kinfo_proc_map = dict(
     ppid=0,
     status=1,
@@ -127,12 +135,6 @@ kinfo_proc_map = dict(
     cpunum=23,
     name=24,
 )
-
-# these get overwritten on "import psutil" from the __init__.py file
-NoSuchProcess = None
-ZombieProcess = None
-AccessDenied = None
-TimeoutExpired = None
 
 
 # =====================================================================
@@ -191,7 +193,7 @@ def virtual_memory():
                     shared = int(line.split()[1]) * 1024
     avail = inactive + cached + free
     used = active + wired + cached
-    percent = usage_percent((total - avail), total, _round=1)
+    percent = usage_percent((total - avail), total, round_=1)
     return svmem(total, avail, percent, used, free,
                  active, inactive, buffers, cached, shared, wired)
 
@@ -199,7 +201,7 @@ def virtual_memory():
 def swap_memory():
     """System swap memory as (total, used, free, sin, sout) namedtuple."""
     total, used, free, sin, sout = cext.swap_mem()
-    percent = usage_percent(used, total, _round=1)
+    percent = usage_percent(used, total, round_=1)
     return _common.sswap(total, used, free, percent, sin, sout)
 
 
@@ -214,7 +216,7 @@ def cpu_times():
     return scputimes(user, nice, system, idle, irq)
 
 
-if hasattr(cext, "per_cpu_times"):
+if HAS_PER_CPU_TIMES:
     def per_cpu_times():
         """Return system CPU times as a namedtuple"""
         ret = []
@@ -348,12 +350,18 @@ def net_if_stats():
     names = net_io_counters().keys()
     ret = {}
     for name in names:
-        mtu = cext_posix.net_if_mtu(name)
-        isup = cext_posix.net_if_flags(name)
-        duplex, speed = cext_posix.net_if_duplex_speed(name)
-        if hasattr(_common, 'NicDuplex'):
-            duplex = _common.NicDuplex(duplex)
-        ret[name] = _common.snicstats(isup, duplex, speed, mtu)
+        try:
+            mtu = cext_posix.net_if_mtu(name)
+            isup = cext_posix.net_if_flags(name)
+            duplex, speed = cext_posix.net_if_duplex_speed(name)
+        except OSError as err:
+            # https://github.com/giampaolo/psutil/issues/1279
+            if err.errno != errno.ENODEV:
+                raise
+        else:
+            if hasattr(_common, 'NicDuplex'):
+                duplex = _common.NicDuplex(duplex)
+            ret[name] = _common.snicstats(isup, duplex, speed, mtu)
     return ret
 
 
@@ -675,7 +683,7 @@ class Process(object):
 
     @wrap_exceptions
     def num_threads(self):
-        if hasattr(cext, "proc_num_threads"):
+        if HAS_PROC_NUM_THREADS:
             # FreeBSD
             return cext.proc_num_threads(self.pid)
         else:
@@ -760,10 +768,7 @@ class Process(object):
 
     @wrap_exceptions
     def wait(self, timeout=None):
-        try:
-            return _psposix.wait_pid(self.pid, timeout)
-        except _psposix.TimeoutExpired:
-            raise TimeoutExpired(timeout, self.pid, self._name)
+        return _psposix.wait_pid(self.pid, timeout, self._name)
 
     @wrap_exceptions
     def nice_get(self):
@@ -798,7 +803,7 @@ class Process(object):
         elif NETBSD:
             with wrap_exceptions_procfs(self):
                 return os.readlink("/proc/%s/cwd" % self.pid)
-        elif hasattr(cext, 'proc_open_files'):
+        elif HAS_PROC_OPEN_FILES:
             # FreeBSD < 8 does not support functions based on
             # kinfo_getfile() and kinfo_getvmmap()
             return cext.proc_cwd(self.pid) or None
@@ -817,7 +822,7 @@ class Process(object):
 
     # FreeBSD < 8 does not support functions based on kinfo_getfile()
     # and kinfo_getvmmap()
-    if hasattr(cext, 'proc_open_files'):
+    if HAS_PROC_OPEN_FILES:
         @wrap_exceptions
         def open_files(self):
             """Return files opened by process as a list of namedtuples."""
@@ -828,7 +833,7 @@ class Process(object):
 
     # FreeBSD < 8 does not support functions based on kinfo_getfile()
     # and kinfo_getvmmap()
-    if hasattr(cext, 'proc_num_fds'):
+    if HAS_PROC_NUM_FDS:
         @wrap_exceptions
         def num_fds(self):
             """Return the number of file descriptors opened by this process."""

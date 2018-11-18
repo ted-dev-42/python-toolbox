@@ -191,7 +191,7 @@ def get_pid_on_device(adb, process_name):
 
     for line in result.split(os.linesep):
         if process_name.lower() in line.lower():
-            return line.split()[2]
+            return int(line.split()[2])
     return 0
 
 
@@ -222,7 +222,7 @@ def remove(fname):
 
 def get_prop(adb, prop):
     cmd = "getprop " + prop
-    output, retcode = adb.shell_command_timeout(cmd, 5)
+    output, retcode = adb.shell_command_timeout(cmd, 10)
     if retcode == 0:
         if output is None:
             output = ''
