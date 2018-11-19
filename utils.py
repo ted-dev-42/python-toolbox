@@ -166,6 +166,13 @@ def zip_dir(src_dir, dest):
     shutil.move(os.path.join(working_dir, zip_file), dest)
 
 
+def is_dir_empty(dirname):
+    if not os.listdir(dirname) :
+        return True
+    else:
+        return False
+
+
 def is_process_exists_on_device(adb, process_name):
     """
     :rtype: bool
