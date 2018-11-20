@@ -201,6 +201,10 @@ def get_pid_on_device(adb, process_name):
     return 0
 
 
+def kill_proc_on_device(adb, pid):
+    adb.shell_command('kill ' + str(pid))
+
+
 def remove_file(filename):
     try:
         os.remove(filename)
