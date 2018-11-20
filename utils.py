@@ -4,7 +4,6 @@ import sys
 import shutil
 import socket
 import tempfile
-import time
 import os
 import csv
 import re
@@ -247,4 +246,14 @@ def _json_object_hook(d):
 
 def json2obj(data):
     return json.loads(data, object_hook=_json_object_hook)
+
+
+def is_device_root(adb):
+    output, retcode = adb.shell_command('whoami')
+    if retcode != 0 or output is None:
+        return False
+
+    if str(output).strip() == 'root':
+        return True
+    return False
 
