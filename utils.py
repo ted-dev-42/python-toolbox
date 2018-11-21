@@ -197,7 +197,7 @@ def get_pid_on_device(adb, process_name):
 
     for line in result.split(os.linesep):
         if process_name.lower() in line.lower():
-            return int(line.split()[2])
+            return int(line.split()[1])
     return 0
 
 

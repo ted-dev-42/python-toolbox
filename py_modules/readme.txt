@@ -1,0 +1,1 @@
+pathlib depends scandir and six

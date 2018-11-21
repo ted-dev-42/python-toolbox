@@ -10,5 +10,6 @@ class TestUtils(TestCase):
         adb.set_adb_path()
         adb.set_target_device()
 
-        pid = utils.get_pid_on_device(adb, 'com.sprd.commlog')
+        pid = utils.get_pid_on_device(adb, 'com.android.commands.monkey')
+        utils.kill_proc_on_device(adb, pid)
         print(pid)
