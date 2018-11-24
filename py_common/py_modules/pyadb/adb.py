@@ -165,17 +165,22 @@ class ADB():
         cmd_list = self.__build_command__(cmd)
         self._debug_print("command: " + str(cmd_list))
 
-        timeout = {"value": False}
+        timeout_ret = {"value": False}
         try:
             adb_proc = subprocess.Popen(cmd_list, stdin=subprocess.PIPE,
                                         stdout=subprocess.PIPE,
                                         stderr=subprocess.PIPE, shell=False)
-
-            timer = Timer(timeout_sec, self.kill_proc, [adb_proc, timeout])
-            timer.start()
+            if timeout_sec != 0:
+                timer = Timer(timeout_sec, self.kill_proc, [adb_proc, timeout_ret])
+                timer.start()
+            else:
+                timer = None
 
             (self.__output, self.__error) = adb_proc.communicate()
-            timer.cancel()
+
+            if timer is not None:
+                timer.cancel()
+
             self.__return = adb_proc.returncode
 
             if (len(self.__output) == 0):
@@ -188,7 +193,7 @@ class ADB():
             print(repr(e))
             pass
 
-        return timeout["value"]
+        return timeout_ret["value"]
 
     def get_version(self):
         """
@@ -272,16 +277,16 @@ class ADB():
         self.run_cmd(['restore', file_name])
         return self.__output
 
-    def wait_for_device(self):
-        """
-        Blocks until device is online
-        adb wait-for-device
-        """
-        self.__clean__()
-        self.run_cmd('wait-for-device')
-        return self.__output
+    # def wait_for_device(self):
+    #     """
+    #     Blocks until device is online
+    #     adb wait-for-device
+    #     """
+    #     self.__clean__()
+    #     self.run_cmd('wait-for-device')
+    #     return self.__output
 
-    def wait_for_device_timeout(self, timeout_sec):
+    def wait_for_device(self, timeout_sec=0):
         """
         Blocks until device is online or timeout
         adb wait-for-device

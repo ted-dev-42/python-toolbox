@@ -1,6 +1,5 @@
 import json
 import sys
-
 import shutil
 import socket
 import tempfile
@@ -8,7 +7,6 @@ import os
 import csv
 import re
 import subprocess
-import errno
 from collections import namedtuple
 from py_modules import psutil
 
@@ -129,6 +127,7 @@ def exec_cmd(cmd, use_shell=False):
     # exit_code = proc.wait()
     return output
 
+
 # can't zip large file, deprecated
 #
 # def zip_dir(src_dir, destination):
@@ -165,13 +164,6 @@ def zip_dir(src_dir, dest):
     shutil.move(os.path.join(working_dir, zip_file), dest)
 
 
-def is_dir_empty(dirname):
-    if not os.listdir(dirname) :
-        return True
-    else:
-        return False
-
-
 def is_process_exists_on_device(adb, process_name):
     """
     :rtype: bool
@@ -188,6 +180,10 @@ def get_pid_on_device(adb, process_name):
     :type process_name: str
     :type adb: ADB
     """
+    _, timeout = adb.wait_for_device(10)
+    if timeout:
+        return 0
+
     result, _ = adb.shell_command("ps | grep " + process_name, 30)  # type: str
     if result is None:
         return 0
@@ -203,31 +199,6 @@ def get_pid_on_device(adb, process_name):
 
 def kill_proc_on_device(adb, pid):
     adb.shell_command('kill ' + str(pid))
-
-
-def remove_file(filename):
-    try:
-        os.remove(filename)
-    except OSError as e:
-        if e.errno != errno.ENOENT:  # errno.ENOENT = no such file or directory
-            raise  # re-raise exception if a different error occurred
-    print("delete file {} success".format(filename))
-
-
-def remove_dir(dirname):
-    try:
-        shutil.rmtree(dirname)
-    except OSError as e:
-        if e.errno != errno.ENOENT:
-            raise
-    print("delete dir {} success".format(dirname))
-
-
-def remove(fname):
-    if os.path.isfile(fname):
-        remove_file(fname)
-    else:
-        remove_dir(fname)
 
 
 def get_prop(adb, prop):
@@ -260,4 +231,3 @@ def is_device_root(adb):
     if str(output).strip() == 'root':
         return True
     return False
-

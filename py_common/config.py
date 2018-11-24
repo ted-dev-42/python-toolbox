@@ -21,16 +21,12 @@ class Config(object):
                 return ""
             return element.text
 
-        if not os.path.exists(config_fname):
-            logging.error("config file not exists!")
-            return None
-
         cfg = cls()
         et = Etree.parse(config_fname)
         root = et.getroot()
         """:type root: xml.etree.ElementTree.Element"""
 
-        cfg.name = get_value(root.find('tool_name'))
+        cfg.name = get_value(root.find('name'))
         cfg.version = get_value(root.find('version'))
         cfg.log_location = get_value(root.find('./log/location'))
         cfg.result_location = get_value(root.find('./result/location'))
@@ -48,8 +44,11 @@ class Config(object):
 __config = None  # type: Config
 
 
-def load():
-    _config = Config.load('config.xml')
+def load(config_file='config.xml'):
+    if not os.path.exists(config_file):
+        logging.error('config file not exists: ' + config_file)
+    global __config
+    __config = Config.load(config_file)
 
 
 def get_name():
