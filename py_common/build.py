@@ -1,3 +1,4 @@
+import os
 import subprocess
 import sys
 from collections import namedtuple
@@ -23,7 +24,12 @@ def copy_project_file(dir_list):
                 src = working_path.joinpath(d.src_dir, f[0])
             dest = build_dir.joinpath(f[1])
             print("copy {} to {}".format(src, dest))
-            fsutils.copy(src, dest)
+
+            try:
+                ign = d.ignores
+            except AttributeError:
+                ign = None
+            fsutils.copy(src, dest, ign)
 
 
 def get_build_dir():
@@ -92,6 +98,10 @@ def get_version():
 
 def pack():
     dist_dir.parent.mkdir(parents=True, exist_ok=True)
+
+    dist_file_name = get_dist_name()
+    if os.path.exists(dist_file_name):
+        fsutils.remove(dist_file_name)
 
     cmd = "7za a {} {}".format(get_dist_name(), get_build_dir())
     cmd_proc = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE)

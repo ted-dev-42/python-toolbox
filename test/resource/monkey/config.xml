@@ -1,0 +1,12 @@
+<config_info>
+    <name>monkey</name>
+    <version>2.0.0</version>
+    <start_script>monkey.py</start_script>
+    <exit_script>exit.py</exit_script>
+    <result>
+        <location>results</location>
+    </result>
+    <report>
+        <location>report.html</location>
+    </report>
+</config_info>
