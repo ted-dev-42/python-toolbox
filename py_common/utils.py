@@ -1,4 +1,5 @@
 import json
+import logging
 import sys
 import shutil
 import socket
@@ -9,6 +10,7 @@ import re
 import subprocess
 from collections import namedtuple
 from py_modules import psutil
+from pyadb import ADB
 
 
 def get_os():
@@ -174,26 +176,34 @@ def is_process_exists_on_device(adb, process_name):
 
 
 def get_pid_on_device(adb, process_name):
+    # type: (ADB, str) -> int
     """
-    get process' pid, if process not exists, return 0
-    :rtype: int
-    :type process_name: str
-    :type adb: ADB
+    get process' pid
+    return pid if process exists, return 0 if process not exists, return -1 if command exec failed
     """
     _, timeout = adb.wait_for_device(10)
     if timeout:
-        return 0
+        return -1
 
-    result, _ = adb.shell_command("ps | grep " + process_name, 30)  # type: str
-    if result is None:
-        return 0
+    result, timeout = adb.shell_command("ps | grep " + process_name, 60)  # type: (result, str)
+    if timeout:
+        logging.warn("exec ps command timeout")
+        return -1
+
     result = result.strip()
     if not result:
+        logging.warn("process not exists. process_name is {}, ps results: {}".format(process_name, result))
         return 0
 
-    for line in result.split(os.linesep):
-        if process_name.lower() in line.lower():
-            return int(line.split()[1])
+    procs = result.split(os.linesep)
+    if len(procs) > 1:
+        logging.warn('more than one process have same process name({})'.format(process_name))
+        return -1
+
+    for p in procs:
+        if process_name.lower() in p.lower():
+            return int(p.split()[1])
+    logging.warn("process not exists. process_name is {}, ps results: {}".format(process_name, result))
     return 0
 
 

@@ -13,3 +13,8 @@ class TestUtils(TestCase):
         pid = py_common.utils.get_pid_on_device(adb, 'com.android.commands.monkey')
         py_common.utils.kill_proc_on_device(adb, pid)
         print(pid)
+
+    def test_cut_string(self):
+        s = 'storage/sdcard0/ylog'
+        print(s[:s.rfind("/")])
+        print(s[s.rfind("/")+1:])

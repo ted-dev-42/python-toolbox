@@ -4,6 +4,7 @@
 # Project Site: http://github.com/sch3m4/pyadb
 
 #modified by Xuanchen Jiang(xuanchen.jiang@spreadtrum.com) for cTest
+import logging
 
 try:
     import sys
@@ -15,6 +16,8 @@ except ImportError, e:
     print "[f] Required module missing. %s" % e.args[0]
     sys.exit(-1)
 
+
+DETACHED_PROCESS = 0x00000008
 
 class ADB():
     PYADB_VERSION = "0.1.4"
@@ -126,19 +129,24 @@ class ADB():
         self._debug_print("command: " + str(cmd_list))
 
         try:
-            adb_proc = subprocess.Popen(cmd_list, stdin=subprocess.PIPE, \
-                                        stdout=subprocess.PIPE, \
-                                        stderr=subprocess.STDOUT, shell=False)
+            adb_proc = subprocess.Popen(cmd_list,
+                                        # stdin=subprocess.PIPE,
+                                        # stdout=subprocess.PIPE,
+                                        # stderr=subprocess.STDOUT,
+                                        shell=False, creationflags=DETACHED_PROCESS)
             (self.__output, self.__error) = adb_proc.communicate()
             self.__return = adb_proc.returncode
 
-            self._debug_print(self.__output)
+            if self.__output is None:
+                self.__output = ''
 
             if (len(self.__output) == 0):
-                self.__output = None
+                self.__output = ''
 
             if (len(self.__error) == 0):
                 self.__error = None
+
+            self._debug_print("output: " + str(self.__output))
 
         except:
             pass
@@ -167,9 +175,11 @@ class ADB():
 
         timeout_ret = {"value": False}
         try:
-            adb_proc = subprocess.Popen(cmd_list, stdin=subprocess.PIPE,
-                                        stdout=subprocess.PIPE,
-                                        stderr=subprocess.PIPE, shell=False)
+            adb_proc = subprocess.Popen(cmd_list,
+                                        # stdin=subprocess.PIPE,
+                                        # stdout=subprocess.PIPE,
+                                        # stderr=subprocess.PIPE,
+                                        shell=False, creationflags=DETACHED_PROCESS)
             if timeout_sec != 0:
                 timer = Timer(timeout_sec, self.kill_proc, [adb_proc, timeout_ret])
                 timer.start()
@@ -183,15 +193,22 @@ class ADB():
 
             self.__return = adb_proc.returncode
 
-            if (len(self.__output) == 0):
-                self.__output = None
+            if self.__output is None:
+                self.__output = ''
 
-            if (len(self.__error) == 0):
+            if len(self.__output) == 0:
+                self.__output = ''
+
+            if len(self.__error) == 0:
                 self.__error = None
 
+            self._debug_print("output: " + str(self.__output))
         except Exception as e:
             print(repr(e))
             pass
+
+        if timeout_ret["value"]:
+            self._warn_print("time out when exec " + cmd)
 
         return timeout_ret["value"]
 
@@ -353,7 +370,7 @@ class ADB():
         adb get-state
         """
         self.__clean__()
-        self.run_cmd('get-state')
+        self.run_cmd_timeout('get-state', 10)
         return self.__output
 
     def get_serialno(self):
@@ -438,10 +455,13 @@ class ADB():
 
         if timeout_sec != 0:
             timeout = self.run_cmd_timeout(['shell', cmd], timeout_sec)
-            return self.__output, timeout
         else:
             self.run_cmd(['shell', cmd])
-            return self.__output, False
+            timeout = False
+            # return self.__output, False
+
+        # self._debug_print("{} 's output: {}".format(cmd, self.__output))
+        return self.__output, timeout
 
     """
     def shell_command_timeout(self, cmd, timeout_sec):
@@ -618,8 +638,8 @@ class ADB():
         return self.__return
 
     def _debug_print(self, msg):
-        if self._debug:
-            print(msg)
+        logging.debug('[{}]: {}'.format(self.__target, msg))
 
-    def enable_debug(self):
-        self._debug = True
+    def _warn_print(self, msg):
+        logging.warn('[{}]: {}'.format(self.__target, msg))
+
