@@ -2,24 +2,17 @@
 # Contact: chema@safetybits.net | @sch3m4 | http://safetybits.net/contact
 # Homepage: http://safetybits.net
 # Project Site: http://github.com/sch3m4/pyadb
+# modified by Xuanchen Jiang(xuanchen.jiang@spreadtrum.com) for cTest
 
-#modified by Xuanchen Jiang(xuanchen.jiang@spreadtrum.com) for cTest
 import logging
 
-try:
-    import sys
-    import os
-    import subprocess
-    from threading import Timer
-except ImportError, e:
-    # should never be reached
-    print "[f] Required module missing. %s" % e.args[0]
-    sys.exit(-1)
+import sys
+import os
+import subprocess
+from threading import Timer
 
 
-DETACHED_PROCESS = 0x00000008
-
-class ADB():
+class ADB(object):
     PYADB_VERSION = "0.1.4"
 
     __adb_path = None
@@ -50,13 +43,13 @@ class ADB():
         self.__error = None
         self.__return = 0
 
-    def __parse_output__(self, outstr):
-        ret = None
-
-        if (len(outstr) > 0):
-            ret = outstr.splitlines()
-
-        return ret
+    # def __parse_output__(self, outstr):
+    #     ret = None
+    #
+    #     if len(outstr) > 0:
+    #         ret = outstr.splitlines()
+    #
+    #     return ret
 
     def __build_command__(self, cmd):
         ret = None
@@ -76,24 +69,24 @@ class ADB():
         #
         if sys.platform.startswith('win'):
             ret = self.__adb_path + " "
-            if (self.__target is not None):
+            if self.__target is not None:
                 ret += "-s " + self.__target + " "
-            if type(cmd) == type([]):
+            if isinstance(cmd, list):
                 ret += ' '.join(cmd)
             else:
                 ret += cmd
         else:
             ret = [self.__adb_path]
-            if (self.__target is not None):
+            if self.__target is not None:
                 ret += ["-s", self.__target]
 
-            if type(cmd) == type([]):
+            if isinstance(cmd, list):
                 for i in cmd:
                     ret.append(i)
             else:
                 ret += [cmd]
 
-        #print ("command: { %s }" % ret)
+        # print ("command: { %s }" % ret)
         return ret
 
     def get_output(self):
@@ -105,7 +98,7 @@ class ADB():
     def get_return_code(self):
         return self.__return
 
-    def lastFailed(self):
+    def last_failed(self):
         """
         Did the last command fail?
         """
@@ -113,51 +106,54 @@ class ADB():
             return True
         return False
 
+    # def run_cmd(self, cmd):
+    #     """
+    #     Runs a command by using adb tool ($ adb <cmd>)
+    #     """
+    #     self.__clean__()
+    #
+    #     if self.__adb_path is None:
+    #         self.__error = "ADB path not set"
+    #         self.__return = 1
+    #         return
+    #
+    #     # For compat of windows
+    #     cmd_list = self.__build_command__(cmd)
+    #     self._debug_print("command: " + str(cmd_list))
+    #
+    #     try:
+    #         adb_proc = subprocess.Popen(cmd_list,
+    #                                     # stdin=subprocess.PIPE,
+    #                                     stdout=subprocess.PIPE,
+    #                                     stderr=subprocess.PIPE,
+    #                                     shell=False)
+    #         (self.__output, self.__error) = adb_proc.communicate()
+    #         self.__return = adb_proc.returncode
+    #
+    #         if self.__output is None:
+    #             self.__output = ''
+    #
+    #         if (len(self.__output) == 0):
+    #             self.__output = ''
+    #
+    #         if (len(self.__error) == 0):
+    #             self.__error = None
+    #
+    #         self._debug_print("output: " + str(self.__output))
+    #
+    #     except:
+    #         pass
+    #
+    #     return
     def run_cmd(self, cmd):
-        """
-        Runs a command by using adb tool ($ adb <cmd>)
-        """
-        self.__clean__()
+        self.run_cmd_timeout(cmd, 0)
 
-        if self.__adb_path is None:
-            self.__error = "ADB path not set"
-            self.__return = 1
-            return
-
-        # For compat of windows
-        cmd_list = self.__build_command__(cmd)
-        self._debug_print("command: " + str(cmd_list))
-
-        try:
-            adb_proc = subprocess.Popen(cmd_list,
-                                        # stdin=subprocess.PIPE,
-                                        # stdout=subprocess.PIPE,
-                                        # stderr=subprocess.STDOUT,
-                                        shell=False, creationflags=DETACHED_PROCESS)
-            (self.__output, self.__error) = adb_proc.communicate()
-            self.__return = adb_proc.returncode
-
-            if self.__output is None:
-                self.__output = ''
-
-            if (len(self.__output) == 0):
-                self.__output = ''
-
-            if (len(self.__error) == 0):
-                self.__error = None
-
-            self._debug_print("output: " + str(self.__output))
-
-        except:
-            pass
-
-        return
-
-    def kill_proc(self, proc, timeout):
+    @staticmethod
+    def kill_proc(proc, timeout):
         timeout["value"] = True
         proc.kill()
 
-    def run_cmd_timeout(self, cmd, timeout_sec):
+    def run_cmd_timeout(self, cmd, timeout_sec=0):
         """
         Runs a command,return true if timeout
         """
@@ -171,15 +167,15 @@ class ADB():
 
         # For compat of windows
         cmd_list = self.__build_command__(cmd)
-        self._debug_print("command: " + str(cmd_list))
+        self.info("command: " + str(cmd_list))
 
         timeout_ret = {"value": False}
         try:
             adb_proc = subprocess.Popen(cmd_list,
-                                        # stdin=subprocess.PIPE,
-                                        # stdout=subprocess.PIPE,
-                                        # stderr=subprocess.PIPE,
-                                        shell=False, creationflags=DETACHED_PROCESS)
+                                        stdin=subprocess.PIPE,
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE,
+                                        shell=False)
             if timeout_sec != 0:
                 timer = Timer(timeout_sec, self.kill_proc, [adb_proc, timeout_ret])
                 timer.start()
@@ -196,19 +192,22 @@ class ADB():
             if self.__output is None:
                 self.__output = ''
 
-            if len(self.__output) == 0:
-                self.__output = ''
+            # if len(self.__output) == 0:
+            #     self.__output = ''
 
-            if len(self.__error) == 0:
-                self.__error = None
+            if self.__error is None:
+                self.__error = ''
 
-            self._debug_print("output: " + str(self.__output))
+            self.debug("output: " + str(self.__output).rstrip("\r\n"))
+            if len(self.__error) != 0:
+                self.error(self.__error)
+
         except Exception as e:
             print(repr(e))
             pass
 
         if timeout_ret["value"]:
-            self._warn_print("time out when exec " + cmd)
+            self.warn("time out when run command")
 
         return timeout_ret["value"]
 
@@ -226,7 +225,8 @@ class ADB():
 
             else:
                 ret = None
-        except:
+        except Exception as e:
+            self.error(repr(e))
             ret = None
         return ret
 
@@ -310,7 +310,7 @@ class ADB():
         """
         self.__clean__()
         timeout = self.run_cmd_timeout('wait-for-device', timeout_sec)
-        return (self.__output, timeout)
+        return self.__output, timeout
 
     def get_help(self):
         """
@@ -329,18 +329,23 @@ class ADB():
         error = 0
         self.run_cmd("devices")
         if self.__error is not None:
-            return ''
+            self.error(self.__error)
+
+        if not self.__output:
+            return
+
         try:
             self.__devices = self.__output.partition('\n')[2].replace('device', '').split()
 
             if self.__devices[1:] == ['no', 'permissions']:
                 error = 2
                 self.__devices = None
-        except:
+        except Exception as e:
+            self.error(repr(e))
             self.__devices = None
             error = 1
 
-        return (error, self.__devices)
+        return error, self.__devices
 
     def set_target_device(self, device=None):
         """
@@ -370,7 +375,7 @@ class ADB():
         adb get-state
         """
         self.__clean__()
-        self.run_cmd_timeout('get-state', 10)
+        self.run_cmd('get-state')
         return self.__output
 
     def get_serialno(self):
@@ -388,7 +393,7 @@ class ADB():
         adb reboot recovery/bootloader
         """
         self.__clean__()
-        if not mode in (self.REBOOT_RECOVERY, self.REBOOT_BOOTLOADER):
+        if mode not in (self.REBOOT_RECOVERY, self.REBOOT_BOOTLOADER):
             self.__error = "mode must be REBOOT_RECOVERY/REBOOT_BOOTLOADER"
             self.__return = 1
             return self.__output
@@ -506,11 +511,14 @@ class ADB():
         self.run_cmd("jdwp")
         return self.__output
 
-    def get_logcat(self, params=[]):
+    def get_logcat(self, params=None):
         """
         View device log
         adb logcat <filter>
         """
+        if params is None:
+            params = []
+
         self.__clean__()
         self.run_cmd(['logcat'] + params)
         return self.__output
@@ -637,9 +645,14 @@ class ADB():
     def get_exit_code(self):
         return self.__return
 
-    def _debug_print(self, msg):
+    def debug(self, msg):
         logging.debug('[{}]: {}'.format(self.__target, msg))
 
-    def _warn_print(self, msg):
+    def info(self, msg):
+        logging.info('[{}]: {}'.format(self.__target, msg))
+
+    def warn(self, msg):
         logging.warn('[{}]: {}'.format(self.__target, msg))
 
+    def error(self, msg):
+        logging.error('[{}]: {}'.format(self.__target, msg))
