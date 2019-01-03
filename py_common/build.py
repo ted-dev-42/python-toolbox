@@ -112,7 +112,7 @@ def pack():
         cwd = None
     else:
         cmd = "zip -r {} .".format(get_dist_name())
-        cwd = get_build_dir()
+        cwd = str(get_build_dir())
 
     cmd_proc = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE, cwd=cwd)
     output = cmd_proc.communicate()[0]
