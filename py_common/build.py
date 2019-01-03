@@ -107,12 +107,22 @@ def pack():
     if os.path.exists(dist_file_name):
         fsutils.remove(dist_file_name)
 
+    try:
+        exclude_root = build_config.pack.exclude_root_dir
+    except AttributeError:
+        exclude_root = False
+
+    if exclude_root:
+        target_dir = '.'
+        cwd = str(get_build_dir())
+    else:
+        target_dir = get_build_dir()
+        cwd = None
+
     if utils.get_os() == 'windows':
         cmd = "7za a {} {}".format(get_dist_name(), get_build_dir())
-        cwd = None
     else:
-        cmd = "zip -r {} .".format(get_dist_name())
-        cwd = str(get_build_dir())
+        cmd = "zip -r {} {}".format(get_dist_name(), target_dir)
 
     cmd_proc = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE, cwd=cwd)
     output = cmd_proc.communicate()[0]
