@@ -1,3 +1,4 @@
+import logging
 import os
 import subprocess
 import sys
@@ -91,9 +92,12 @@ def get_dist_name():
 
 
 def get_version():
-    import config
-    config.load(str(build_dir.joinpath('config.xml')))
-    return config.get_version()
+    if build_dir.joinpath('config.xml').exists():
+        import config
+        config.load(str(build_dir.joinpath('config.xml')))
+        return config.get_version()
+    else:
+        return build_config.version
 
 
 def pack():
@@ -111,6 +115,13 @@ def pack():
         print("pack success")
     else:
         print("pack failed")
+
+
+def init_log():
+    logging.basicConfig(level=logging.DEBUG,
+                        stream=sys.stdout,
+                        format='[BUILD]%(asctime)s [%(levelname)s] %(message)s (%(filename)s[%(lineno)d])',
+                        datefmt='%m-%d %H:%M:%S')
 
 
 if __name__ == "__main__":
