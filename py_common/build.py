@@ -100,7 +100,30 @@ def get_version():
         return build_config.version
 
 
-def pack():
+def pack_win():
+    dist_dir.parent.mkdir(parents=True, exist_ok=True)
+
+    dist_file_name = get_dist_name()
+    if os.path.exists(dist_file_name):
+        fsutils.remove(dist_file_name)
+
+    if utils.get_os() == 'windows':
+        cmd = "7za a {} {}".format(get_dist_name(), get_build_dir())
+        cwd = None
+    else:
+        cmd = "zip -r {} .".format(get_dist_name())
+        cwd = get_build_dir()
+
+    cmd_proc = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE, cwd=cwd)
+    output = cmd_proc.communicate()[0]
+    print(output)
+    if cmd_proc.returncode == 0:
+        print("pack success")
+    else:
+        print("pack failed")
+
+
+def pack_linux():
     dist_dir.parent.mkdir(parents=True, exist_ok=True)
 
     dist_file_name = get_dist_name()
