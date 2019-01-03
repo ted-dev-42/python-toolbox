@@ -130,6 +130,21 @@ def exec_cmd(cmd, use_shell=False):
     return output
 
 
+def exec_cmd_live(cmd):
+    print("exec command: " + cmd)
+    cmd_list = split(cmd)
+    p = subprocess.Popen(cmd_list, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    stdout = []
+    while True:
+        line = p.stdout.readline()
+        stdout.append(line)
+        print(str(line))
+        if not line:
+            if p.poll() is not None:
+                break
+    return ''.join(stdout)
+
+
 # can't zip large file, deprecated
 #
 # def zip_dir(src_dir, destination):

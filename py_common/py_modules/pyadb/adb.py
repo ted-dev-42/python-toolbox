@@ -202,6 +202,9 @@ class ADB(object):
             if len(self.__error) != 0:
                 self.error(self.__error)
 
+            if self.__return != 0:
+                self.error("return code: " + str(self.__return))
+
         except Exception as e:
             print(repr(e))
             pass
