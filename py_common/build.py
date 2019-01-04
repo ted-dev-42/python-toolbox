@@ -3,6 +3,7 @@ import os
 import subprocess
 import sys
 from collections import namedtuple
+import py_modules
 from py_modules.pathlib2 import Path
 import utils
 import fsutils
