@@ -256,3 +256,17 @@ def is_device_root(adb):
     if str(output).strip() == 'root':
         return True
     return False
+
+
+def set_finish_flag():
+    open('finish-flag', 'w').close()
+
+
+def clear_finish_flag():
+    if os.path.isfile('finish-flag'):
+        os.remove('finish-flag')
+
+
+def is_finish():
+    return os.path.isfile('finish-flag')
+
