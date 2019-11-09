@@ -158,4 +158,8 @@ venv.bak/
 
 # mypy
 .mypy_cache/
-
+/.idea
+/test/libs
+/test/logs
+/test/py_common
+/test/resource

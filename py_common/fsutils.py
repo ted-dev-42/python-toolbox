@@ -4,7 +4,7 @@ import errno
 import logging
 import types
 
-from py_modules.pathlib2 import Path
+from pathlib2 import Path
 
 
 def is_dir_empty(dirname):
@@ -82,7 +82,7 @@ def copy(src, dest, ignore=None):
         copy_file(src_file, dest.joinpath(relative_path))
 
 
-def ignore_process(ignore_pattern):
+def _ignore_process(ignore_pattern):
     # type: (str) -> types.FunctionType
 
     def _none_ignore(_path):
@@ -108,7 +108,7 @@ def get_all_files_dirs(path_obj, ignore_pattern=None):
     flist = []
     dlist = []
     ignore_list = []
-    ignore = ignore_process(ignore_pattern)
+    ignore = _ignore_process(ignore_pattern)
     if path_obj.is_file():
         if not ignore(path_obj):
             flist.append(path_obj)
@@ -147,3 +147,19 @@ def get_all_dirs(path_obj, ignore_pattern=None):
 def read_file(file_name):
     with open(file_name) as f:
         return f.read()
+
+
+def mkdir_p(path):
+    try:
+        os.makedirs(path)
+    except OSError as exc:
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else:
+            raise
+
+
+def write_string_to_file(content, file_name, mode='w'):
+    mkdir_p(os.path.dirname(file_name))
+    with open(file_name, mode) as f:
+        f.write(content)

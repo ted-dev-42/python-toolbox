@@ -8,9 +8,11 @@ import os
 import csv
 import re
 import subprocess
+
+import fsutils
+import psutil
 from collections import namedtuple
-from py_modules import psutil
-from pyadb import ADB
+from adb import ADB
 
 
 def get_os():
@@ -142,7 +144,18 @@ def exec_cmd_live(cmd):
         if not line:
             if p.poll() is not None:
                 break
-    return ''.join(stdout)
+    return p.returncode, ''.join(stdout)
+
+
+def exec_cmd_live2(cmd):
+    cmd_list = split(cmd)
+    popen = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, universal_newlines=True)
+    for stdout_line in iter(popen.stdout.readline, ""):
+        yield stdout_line
+    popen.stdout.close()
+    return_code = popen.wait()
+    if return_code:
+        raise subprocess.CalledProcessError(return_code, cmd)
 
 
 # can't zip large file, deprecated
@@ -269,4 +282,20 @@ def clear_finish_flag():
 
 def is_finish():
     return os.path.isfile('finish-flag')
+
+
+def _get_version_file():
+    if os.path.isfile("version"):
+        return "version"
+    elif os.path.isfile("VERSION"):
+        return "VERSION"
+    else:
+        return None
+
+
+def get_version():
+    version_file = _get_version_file()
+    if version_file is None:
+        return "unknown"
+    return fsutils.read_file(version_file).strip()
 

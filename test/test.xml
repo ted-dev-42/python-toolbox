@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no' ?>
+<SubPlan version="2.0">
+	<Entry include="arm64-v8a CtsDeqpTestCases EGL.functional.get_frame_timestamps#rgb565_depth_stencil"/>
+	<Entry include="arm64-v8a CtsDeqpTestCases EGL.functional.preserve_swap.preserve.no_read_before_swap#post_clear"/>
+	<Entry include="arm64-v8a CtsNetTestCases android.net.cts.ConnectivityManagerTest#testConnectivityChanged_manifestRequestOnlyPreN_shouldReceiveIntent"/>
+	<Entry include="arm64-v8a CtsAppSecurityHostTestCases android.appsecurity.cts.InstantCookieHostTest#testCookieUpdateAndRetrieval"/>
+	<Entry include="arm64-v8a CtsBluetoothTestCases android.bluetooth.cts.BluetoothLeScanTest#testBatchScan"/>
+</SubPlan>

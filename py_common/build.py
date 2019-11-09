@@ -3,8 +3,8 @@ import os
 import subprocess
 import sys
 from collections import namedtuple
-import py_modules
-from py_modules.pathlib2 import Path
+
+from pathlib2 import Path
 import utils
 import fsutils
 
@@ -12,6 +12,7 @@ working_path = None  # type: Path
 build_dir = None  # type: Path
 dist_dir = None  # type: Path
 build_config = None  # type: namedtuple
+DEFAULT_INSTALL_DEST = Path("py_common/py_modules")
 
 
 def copy_project_file(dir_list):
@@ -54,19 +55,39 @@ def init():
     global build_config
     global build_dir
     global dist_dir
-    working_path, config_file = get_config_file_dir_name(sys.argv[1])
+    working_path, config_file = get_config_file(sys.argv[1])
     build_config = load_build_config(config_file)
     build_dir = get_build_dir()
     if build_dir.exists():
         fsutils.remove(str(build_dir))
     dist_dir = get_dist_dir()
+    # save_version()
 
 
 def build():
     print('building ...')
     init()
     copy_project_file(build_config.project_files)
+    try:
+        install_modules(build_config.install)
+    except AttributeError:
+        pass
     pack()
+
+
+def install_modules(install_config):
+    if install_config is None:
+        return
+
+    try:
+        dest = get_build_dir().joinpath(install_config.dest)
+    except AttributeError:
+        dest = get_build_dir().joinpath(DEFAULT_INSTALL_DEST)
+
+    import lib_installer_legacy as installer
+    installer.init(install_config.libs_dir)
+    for m in install_config.modules:
+        installer.install(m, dest)
 
 
 def load_build_config(config_file):
@@ -79,7 +100,7 @@ def load_build_config(config_file):
         return utils.json2obj(f.read())
 
 
-def get_config_file_dir_name(config_file):
+def get_config_file(config_file):
     # type: (str) -> (Path, Path)
     config_path = Path(config_file).resolve()
     dir_name = config_path.parent
@@ -89,16 +110,43 @@ def get_config_file_dir_name(config_file):
 
 
 def get_dist_name():
-    return "{}_{}.zip".format(dist_dir.joinpath(build_config.name), get_version())
+    version = get_version()
+    dist_file_path = dist_dir.joinpath(build_config.name)
+    if version == "":
+        return "{}.zip".format(dist_file_path)
+    else:
+        return "{}_{}.zip".format(dist_file_path, version)
+
+
+def get_version_file():
+    try:
+        return str(working_path.joinpath(build_config.version_file))
+    except AttributeError:
+        pass
+
+    if working_path.joinpath("version").exists():
+        return "version"
+    elif working_path.joinpath("VERSION").exists():
+        return "VERSION"
+    else:
+        return None
 
 
 def get_version():
-    if build_dir.joinpath('config.xml').exists():
-        import config
-        config.load(str(build_dir.joinpath('config.xml')))
-        return config.get_version()
-    else:
-        return build_config.version
+    # if build_dir.joinpath('config.xml').exists():
+    #     import config
+    #     config.load(str(build_dir.joinpath('config.xml')))
+    #     return config.get_version()
+    # else:
+    version_file = get_version_file()
+    if version_file is None:
+        return ""
+    return fsutils.read_file(version_file).strip()
+
+
+# def save_version():
+#     with open('VERSION', 'w') as vf:
+#         vf.write(build_config.version)
 
 
 def pack():

@@ -1,9 +1,3 @@
-# Author: Chema Garcia (aka sch3m4)
-# Contact: chema@safetybits.net | @sch3m4 | http://safetybits.net/contact
-# Homepage: http://safetybits.net
-# Project Site: http://github.com/sch3m4/pyadb
-# modified by Xuanchen Jiang(xuanchen.jiang@spreadtrum.com) for cTest
-
 import logging
 
 import sys
@@ -13,7 +7,7 @@ from threading import Timer
 
 
 class ADB(object):
-    PYADB_VERSION = "0.1.4"
+    PYADB_VERSION = "1.1.1"
 
     __adb_path = None
     __output = None
@@ -34,7 +28,7 @@ class ADB(object):
     def pyadb_version(self):
         return self.PYADB_VERSION
 
-    def __init__(self, adb_path=None):
+    def __init__(self, adb_path="adb"):
         self.__adb_path = adb_path
         self._debug = True
 
@@ -145,15 +139,15 @@ class ADB(object):
     #         pass
     #
     #     return
-    def run_cmd(self, cmd):
-        self.run_cmd_timeout(cmd, 0)
+    def run_cmd(self, cmd, is_live_output=False):
+        self.run_cmd_timeout(cmd, 0, is_live_output)
 
     @staticmethod
     def kill_proc(proc, timeout):
         timeout["value"] = True
         proc.kill()
 
-    def run_cmd_timeout(self, cmd, timeout_sec=0):
+    def run_cmd_timeout(self, cmd, timeout_sec=0, is_live_output=False):
         """
         Runs a command,return true if timeout
         """
@@ -170,11 +164,16 @@ class ADB(object):
         self.info("command: " + str(cmd_list))
 
         timeout_ret = {"value": False}
+        if is_live_output:
+            stderr_dest = subprocess.STDOUT
+        else:
+            stderr_dest = subprocess.PIPE
+
         try:
             adb_proc = subprocess.Popen(cmd_list,
                                         stdin=subprocess.PIPE,
                                         stdout=subprocess.PIPE,
-                                        stderr=subprocess.PIPE,
+                                        stderr=stderr_dest,
                                         shell=False)
             if timeout_sec != 0:
                 timer = Timer(timeout_sec, self.kill_proc, [adb_proc, timeout_ret])
@@ -182,7 +181,15 @@ class ADB(object):
             else:
                 timer = None
 
-            (self.__output, self.__error) = adb_proc.communicate()
+            if is_live_output:
+                while True:
+                    line = adb_proc.stdout.readline()
+                    self.info(str(line).strip())
+                    if not line:
+                        if adb_proc.poll() is not None:
+                            break
+            else:
+                (self.__output, self.__error) = adb_proc.communicate()
 
             if timer is not None:
                 timer.cancel()
@@ -198,7 +205,12 @@ class ADB(object):
             if self.__error is None:
                 self.__error = ''
 
-            self.debug("output: " + str(self.__output).rstrip("\r\n"))
+            self.__output = str(self.__output).strip()
+
+            self.debug("output: " + self.__output)
+            # hex = ":".join("{:02x}".format(ord(c)) for c in self.__output)
+            # print(hex)
+
             if len(self.__error) != 0:
                 self.error(self.__error)
 
@@ -331,8 +343,6 @@ class ADB(object):
         """
         error = 0
         self.run_cmd("devices")
-        if self.__error is not None:
-            self.error(self.__error)
 
         if not self.__output:
             return
@@ -454,7 +464,8 @@ class ADB(object):
         self.run_cmd(['push', local, remote])
         return self.__output
 
-    def shell_command(self, cmd, timeout_sec=0):
+    def shell_command(self, cmd, timeout_sec=0, is_live_output=False):
+        # type: (str, int, bool) -> (str, bool)
         """
         Executes a shell command
         adb shell <cmd>
@@ -462,9 +473,9 @@ class ADB(object):
         self.__clean__()
 
         if timeout_sec != 0:
-            timeout = self.run_cmd_timeout(['shell', cmd], timeout_sec)
+            timeout = self.run_cmd_timeout(['shell', cmd], timeout_sec, is_live_output)
         else:
-            self.run_cmd(['shell', cmd])
+            self.run_cmd(['shell', cmd], is_live_output)
             timeout = False
             # return self.__output, False
 
@@ -633,7 +644,7 @@ class ADB(object):
         Look for a binary file on the device
         """
 
-        self.shell_command(['which', name])
+        self.shell_command('which {}'.format(name))
 
         if self.__output is None:  # not found
             self.__error = "'%s' was not found" % name
@@ -659,3 +670,9 @@ class ADB(object):
 
     def error(self, msg):
         logging.error('[{}]: {}'.format(self.__target, msg))
+
+    def get_prop(self, prop_name):
+        value, timeout = self.shell_command("getprop {}".format(prop_name), 15)
+        if timeout:
+            return ""
+        return value

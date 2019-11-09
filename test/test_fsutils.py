@@ -4,7 +4,8 @@ from unittest import TestCase
 import fsutils
 from pathlib2 import Path
 
-class TestCopy(TestCase):
+
+class TestFsutils(TestCase):
     def test_copy(self):
         path = Path('resource/monkey')
         flist = path.glob("*")
@@ -27,3 +28,6 @@ class TestCopy(TestCase):
         f , d = fsutils.get_all_files_dirs(path, '*.pyc, mako')
         print(f)
         print(d)
+
+    def test_remove_dir(self):
+        fsutils.remove_dir("aaaa")
